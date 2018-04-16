@@ -42,7 +42,7 @@ class BatchGenerator():
             if img is None:
                 print("Error path : , ", path+p)
                 sys.exit()
-            l.append(cv2.resize(img, self.resize_shape))
+            l.append(cv2.resize(img, (self.resize_shape[1], self.resize_shape[0])))
         return np.asarray(l)
     
     def next_(self, batch_size=1, random=False, path=''):
@@ -113,10 +113,10 @@ class YOLOv1():
         self.lambda_noobj = 0.5
         self.resize_shape = input_shape
         if model == 'vgg16':
-            self.model = vgg16(input_shape=input_shape, grid_size=(self.Sx, self.Sy), bounding_boxes=self.B, num_class=self.C)
+            self.model = vgg16(input_shape=input_shape, grid_size=(self.Sy, self.Sx), bounding_boxes=self.B, num_class=self.C)
             self.model.summary()
         if model == 'mobilenet':
-            self.model = mobilenet_yolo(input_shape=input_shape, grid_size=(self.Sx, self.Sy), bounding_boxes=self.B, num_class=self.C)
+            self.model = mobilenet_yolo(input_shape=input_shape, grid_size=(self.Sy, self.Sx), bounding_boxes=self.B, num_class=self.C)
             self.model.summary()
         self.class_to_number = None
      
@@ -167,11 +167,11 @@ class YOLOv1():
                 #train[-1]['filepath'] = file['filepath']
                 #train[-1]['bboxes'] = self.convert_list_to_bbox(file['bboxes'], dic)
                 X_train.append(file['filepath'])
-                Bboxes_train.append(self.convert_list_to_np(file['bboxes'], dic))
+                Bboxes_train.append(self.convert_list_to_npv2(file['bboxes'], dic))
             else:
                 #test.append({})
                 X_test.append(file['filepath'])
-                Bboxes_test.append(self.convert_list_to_np(file['bboxes'], dic))
+                Bboxes_test.append(self.convert_list_to_npv2(file['bboxes'], dic))
 
         return X_train, np.asarray(Bboxes_train), X_test, np.asarray(Bboxes_test)
 
@@ -229,6 +229,89 @@ class YOLOv1():
                         y_confidence[Y//height_cell, X//width_cell, cpt] = 1
                         y_bbox[Y//height_cell, X//width_cell, cpt, 0] = float(X/width)
                         y_bbox[Y//height_cell, X//width_cell, cpt, 1] = float(Y/height)
+                        y_bbox[Y//height_cell, X//width_cell, cpt, 2] = float(W/width)
+                        y_bbox[Y//height_cell, X//width_cell, cpt, 3] = float(H/height)
+                        cpt_confidence[Y//height_cell, X//width_cell] += 1
+        return np.concatenate((y_bbox.flatten(), y_confidence.flatten(), y_class.flatten()), axis=0)
+    def normalize_coordinate(self, X, Y, height_cell, width_cell, grid_size):
+        i = Y//height_cell
+        j = X//width_cell
+        
+        if i < grid_size[0]-1:
+            y = float((Y- i*height_cell) /(height_cell-1))
+        else:
+            t = abs(i*height_cell - self.resize_shape[0] + 1)
+            y = float((Y- i*height_cell)/(t-1))
+            
+        if j < grid_size[1]-1:
+            x = float(( X - j*width_cell) /(width_cell-1))
+        else:
+            t = abs(j*width_cell - self.resize_shape[1] + 1)
+            x = float(( X - j*width_cell) /(t-1))
+        return x, y
+    
+    def get_coordinate_from_normalize(self, X, Y, i, j, height_cell, width_cell, grid_size):
+        
+        
+        if i < grid_size[0]-1:
+            y = int(i*height_cell + Y*height_cell) #float(Y/(height_cell-1))
+        else:
+            t = abs(i*height_cell - self.resize_shape[0] + 1)
+            y = int(i*height_cell + Y*t)
+            
+        if j < grid_size[1]-1:
+            x = int(j*width_cell + X*width_cell)
+        else:
+            t = abs(j*width_cell - self.resize_shape[1] + 1)
+            x = int(j*width_cell + X*t)
+        return x, y
+    def convert_list_to_npv2(self, liste, dic): #height width
+        '''
+            convert list of box into numpy array
+            normalise x and y depending of the cell
+            normalise w and h depending of the image size
+            return the ground truth box, the class object and the box coordinate(normalise between 0 and 1)
+        '''
+        y_bbox = np.zeros((self.Sy, self.Sx, self.B, 4))
+        y_confidence = np.zeros((self.Sy, self.Sx, self.B), dtype=np.uint8)
+        y_class = np.zeros((self.Sy, self.Sx, self.C), dtype=np.uint8)
+        
+        cpt_confidence = np.zeros((self.Sy, self.Sx), dtype=np.uint8)
+        
+        height = self.resize_shape[0]
+        width = self.resize_shape[1]
+        height_cell = math.ceil(height/self.Sy)
+        width_cell = math.ceil(width/self.Sx)
+        
+        for l in liste:
+            X = l['x']
+            Y = l['y']
+            W = l['w']
+            H = l['h']
+            Class = dic[l['class']]
+            #print(X, width_cell, X//width_cell)
+            # compute ground truth box + class + bbox
+            # multi box, if there is two object of the same class in one cell, then we return this two. In other case return one object.
+            #print('width : {}, height : {}, X: {}, Y : {} '.format(width, height, X, Y))
+            cpt = cpt_confidence[Y//height_cell, X//width_cell] 
+            if cpt == 0:
+                y_confidence[Y//height_cell, X//width_cell, :] = 1
+                cpt_confidence[Y//height_cell, X//width_cell] += 1
+                y_class[Y//height_cell, X//width_cell, Class] = 1
+                # normalise data from cell size
+                #y_bbox[Y//height_cell, X//width_cell, :, 0] = float(X/width)
+                #y_bbox[Y//height_cell, X//width_cell, :, 1] = float(Y/height)
+                y_bbox[Y//height_cell, X//width_cell, :, 0], y_bbox[Y//height_cell, X//width_cell, :, 1] = self.normalize_coordinate(X, Y, height_cell, width_cell, (self.Sy, self.Sx))
+                # normalise data from image size
+                y_bbox[Y//height_cell, X//width_cell, :, 2] = float(W/width)
+                y_bbox[Y//height_cell, X//width_cell, :, 3] = float(H/height)
+            else:
+                if y_class[Y//height_cell, X//width_cell, Class] == 1:
+                    if cpt < self.B:
+                        y_confidence[Y//height_cell, X//width_cell, cpt] = 1
+                        #y_bbox[Y//height_cell, X//width_cell, cpt, 0] = float(X/width)
+                        #y_bbox[Y//height_cell, X//width_cell, cpt, 1] = float(Y/height)
+                        y_bbox[Y//height_cell, X//width_cell, cpt, 0], y_bbox[Y//height_cell, X//width_cell, cpt, 1] = self.normalize_coordinate(X, Y, height_cell, width_cell, (self.Sy, self.Sx))
                         y_bbox[Y//height_cell, X//width_cell, cpt, 2] = float(W/width)
                         y_bbox[Y//height_cell, X//width_cell, cpt, 3] = float(H/height)
                         cpt_confidence[Y//height_cell, X//width_cell] += 1
@@ -306,6 +389,34 @@ class YOLOv1():
                         cv2.waitKey(0)
         cv2.destroyAllWindows()
     
+    def predict_on_imgv2(self, filename, treshold=0.5):
+        img = cv2.resize(cv2.imread(filename), (self.resize_shape[0], self.resize_shape[1]))
+        img_ = np.expand_dims(img, axis=0)
+        print("\n\n ### IMG SHAPE #### : ", img_.shape)
+        cv2.imshow('img', img)
+        
+        x = self.model.predict(img_)
+        print(x.shape)        
+        cv2.waitKey(0)
+        bbox, confidence, classes = self.convert_output(x)
+        
+        for i in range(self.Sy):
+            for j in range(self.Sx):
+                for k in range(self.B):
+                    prob = confidence[0,i,j,k]* np.max(classes[0, i,j,k])
+                    print(prob)
+                    if prob>treshold:
+                        print('Object :', keybyvalue(self.class_to_number, np.argmax(classes[i,j,k]) ))
+                        x = int(bbox[0, i, j, k, 0]*(self.resize_shape[1]))
+                        y = int(bbox[0, i, j, k, 1]*(self.resize_shape[0]))
+                        w = int(bbox[0, i, j, k, 2]*(self.resize_shape[1]))
+                        h = int(bbox[0, i, j, k, 3]*(self.resize_shape[0])) 
+                        cv2.circle(img, (x,y), 10, (0,255,0), -1  )
+                        cv2.rectangle(img, (x-w, y-h), (x+w, y+h),(0,255,0),3)
+                        cv2.imshow('img', img)
+                        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        
     def load_network(self, path):
         
 
@@ -328,8 +439,8 @@ class YOLOv1():
         
         for box in datas: # box = one box in the image of the dataset 'truth'
 
-            X = round(box.x*self.resize_shape[0])
-            Y = round(box.y*self.resize_shape[1])
+            X = round(box.x*self.resize_shape[1])
+            Y = round(box.y*self.resize_shape[0])
             gtb[X%self.Sx, Y%self.Sy] = 1
             #y_class[X%self.Sx, Y%self.Sy, self.C-1] = 0
             y_class[X%self.Sx, Y%self.Sy, box.c] = 1
@@ -467,7 +578,7 @@ class YOLOv1():
             #print(data_)
             if load_img:
                 img = cv2.imread(data_)
-                img = cv2.resize(img, (self.resize_shape[0], self.resize_shape[1]))
+                img = cv2.resize(img, (self.resize_shape[1], self.resize_shape[0]))
             else:
                 img = data_
             print('number of boxes :' , len(all_data_boxes[i]))
@@ -489,17 +600,62 @@ class YOLOv1():
                 x = int(y_bboxes[i_, j_, cpt, 0]*(self.resize_shape[1]))
                 y = int(y_bboxes[i_, j_, cpt, 1]*(self.resize_shape[0]))
                 w = int(y_bboxes[i_, j_, cpt, 2]*(self.resize_shape[1]))
-                h = int(y_bboxes[i_, j_, cpt, 3]*(self.resize_shape[0])) 
+                h = int(y_bboxes[i_, j_, cpt, 3]*(self.resize_shape[0]))
                 cv2.circle(img, (x,y), 10, (0,255,0), -1  )
-                cv2.rectangle(img, (x-w, y-h), (x+w, y+h),(0,255,0),3)
+                cv2.rectangle(img, (x-w//2, y-h//2), (x+w//2, y+h//2),(0,255,0),3)
                 cv2.imshow('wind2', img)
                 label = np.where(y_class[i_,j_]==1)[0]
                 print(keybyvalue(self.class_to_number, label))
                 cv2.waitKey(0)
                 
             cv2.destroyAllWindows()
-
- 
+            
+    def print_imgv2(self, all_data_path, all_data_boxes, load_img=False):
+        height_cell = math.ceil(self.resize_shape[0]/self.Sy)
+        width_cell = math.ceil(self.resize_shape[1]/self.Sx)
+        for i, data_ in enumerate(all_data_path):
+            #print(data_)
+            if load_img:
+                img = cv2.imread(data_)
+                img = cv2.resize(img, (self.resize_shape[0], self.resize_shape[1]))
+            else:
+                img = data_
+            print('number of boxes :' , len(all_data_boxes[i]))
+            
+            print(all_data_boxes[i].shape)
+            y_bboxes = all_data_boxes[i, :self.Sx*self.Sy*self.B*4].reshape((self.Sy, self.Sx, self.B, 4))
+            y_confidence = all_data_boxes[i, self.Sx*self.Sy*self.B*4:self.Sx*self.Sy*self.B*5].reshape((self.Sy, self.Sx, self.B))
+            y_class = all_data_boxes[i, self.Sx*self.Sy*self.B*5:].reshape((self.Sy, self.Sx, self.C))
+            print(y_bboxes.shape, y_confidence.shape, y_class.shape)
+            
+            
+            
+            res = np.where(y_confidence>0.5)
+            print(res)
+            res= np.array([res[0], res[1], res[2]]).T
+            print("res shape :", res.shape)
+            for i_, j_, cpt in res:
+                print(i_, j_, cpt)
+                #x = int(y_bboxes[i_, j_, cpt, 0]*(self.resize_shape[1]))
+                #y = int(y_bboxes[i_, j_, cpt, 1]*(self.resize_shape[0]))
+                x, y = self.get_coordinate_from_normalize(y_bboxes[i_, j_, cpt, 0], y_bboxes[i_, j_, cpt, 1], i_, j_, height_cell, width_cell, (self.Sy, self.Sx))
+                w = int(y_bboxes[i_, j_, cpt, 2]*(self.resize_shape[1]))
+                h = int(y_bboxes[i_, j_, cpt, 3]*(self.resize_shape[0]))
+                cv2.circle(img, (x,y), 10, (0,255,0), -1  )
+                cv2.rectangle(img, (x-w//2, y-h//2), (x+w//2, y+h//2), (0,255,0), 3)
+                cv2.imshow('wind2', img)
+                label = np.where(y_class[i_,j_]==1)[0]
+                print(keybyvalue(self.class_to_number, label))
+                cv2.waitKey(0)
+                
+            cv2.destroyAllWindows()
+    
+    def test_print(self, filename, batch_size=20, path='../'):
+        X_train, Bboxes_train, X_test, Bboxes_test, classes_count_train, classes_count_test, _ = self.load_data(filename)
+        batchTrain = BatchGenerator(X_train, Bboxes_train, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=False, path=path)
+        #batchTest = BatchGenerator(X_test, Bboxes_test, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=False, path=path)
+        x, y = next(batchTrain)
+        self.print_imgv2(x, y, load_img=False)
          
 #keras.losses.loss_yolo = YOLOv1().loss_yolo  
 #filename = 'VOC2007.txt'
@@ -515,5 +671,12 @@ class YOLOv1():
 #yolo.load_model('YOLOv1.hdf5')
 #yolo.load_config()
 
+#keras.losses.loss_yolo = YOLOv1().loss_yolo  
+#filename = 'VOC2007.txt'
+#yolo = YOLOv1(input_shape=(600, 1000, 3), model=None, grid_size=(7 ,7), bounding_boxes=2, number_classes=20)       
+#yolo.test_print(filename)
+
+
+## TEST
 #yolo.model.summary()
 #yolo.predict_on_img('../../dataset/VOCdevkit/VOC2007train/JPEGImages/000012.jpg', treshold=0.5)

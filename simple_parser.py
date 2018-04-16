@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import math
 
 def get_raw_data(input_path, resize=True, resize_shape=(448,448,3)):
     found_bg = False
@@ -23,9 +23,9 @@ def get_raw_data(input_path, resize=True, resize_shape=(448,448,3)):
             width = int(width)
             height = int(height)
             if resize == True:
-                x, y, w, h = compute_coordinate_reshape(int(x1), int(y1), int(x2), int(y2), (width, height, 3), resize_shape)
+                x, y, w, h = compute_coordinate_reshape(int(x1), int(y1), int(x2), int(y2), (height, width, 3), resize_shape)
             else:
-                x, y, w, h = compute_coordinate_reshape(int(x1), int(y1), int(x2), int(y2), (width, height, 3), (width, height, 3))
+                x, y, w, h = compute_coordinate_reshape(int(x1), int(y1), int(x2), int(y2), (height, width, 3), (height, width, 3))
             if mode == 'training':
                 if class_name not in classes_count_train: # count class in the dataset
                     classes_count_train[class_name] = 1
@@ -81,43 +81,52 @@ def get_raw_data(input_path, resize=True, resize_shape=(448,448,3)):
 
 
 def compute_coordinate_reshape(x1, y1, x2, y2, shape, resize_shape): # considering edge leftbottom and righttop
-    x_coeff = 1.0*resize_shape[0]/shape[0]
-    y_coeff = 1.0*resize_shape[1]/shape[1]
-    x1new = int(x_coeff*x1)
-    x2new = int(x_coeff*x2)
-    y1new = int(y_coeff*y1)
-    y2new = int(y_coeff*y2)
+    x_coeff = 1.0*resize_shape[1]/shape[1]
+    y_coeff = 1.0*resize_shape[0]/shape[0]
+    x1new = math.ceil(x_coeff*x1)
+    x2new = math.ceil(x_coeff*x2)
+    y1new = math.ceil(y_coeff*y1)
+    y2new = math.ceil(y_coeff*y2)
     
-    x = int((x1new+x2new)/2)
-    w = int((x2new-x1new)/2)
-    y = int((y1new+y2new)/2)
-    h = int((y2new-y1new)/2)
+    x = math.ceil((x1new+x2new)/2)
+    w = math.ceil((x2new-x1new)/2)
+    y = math.ceil((y1new+y2new)/2)
+    h = math.ceil((y2new-y1new)/2)
     
     if x-w<0:
         w = w - abs(x-w)
-    if x+w>resize_shape[0]-1:
-        w = w - abs(resize_shape[0]-1 -x-w)
+    if x+w>resize_shape[1]-1:
+        w = w - abs(resize_shape[1]-1 -x-w)
     
     if y-h<0:
         h = h - abs(y-h)
-    if y+h>resize_shape[1]-1:
-        h = h - abs(resize_shape[1]-1 -y-h)
+    if y+h>resize_shape[0]-1:
+        h = h - abs(resize_shape[0]-1 -y-h)
         
-    return x, y, w, h
+    return x, y, 2*w, 2*h
 
-def test_data(all_data, resize=True, resize_shape=(448,448,3)):
+def test_data(all_data, resize=True, resize_shape=(448,448,3), path='../'):
     for data in all_data:
-        img = cv2.imread(data['filepath'])
+        img = cv2.imread(path+data['filepath'])
         if resize:
-            img = cv2.resize(img, (resize_shape[0], resize_shape[1]))
+            img = cv2.resize(img, (resize_shape[1], resize_shape[0]))
         print('number of boxes :' , len(data['bboxes']))
         for i in range(len(data['bboxes'])):
             x = data['bboxes'][i]['x']
             y = data['bboxes'][i]['y']
             w = data['bboxes'][i]['w']
             h = data['bboxes'][i]['h']
-            cv2.rectangle(img, (x-w, y-h), (x+w, y+h),(0,255,0),3)
+            cv2.rectangle(img, (x-math.ceil(w/2), y-math.ceil(h/2)), (x+math.ceil(w/2), y+math.ceil(h/2)), (0,255,0), 3)
             cv2.imshow('wind2', img)
             print(data['bboxes'][i]['class'])
         
         cv2.waitKey(0)
+        
+def main():
+    filename = 'VOC2007.txt'
+    i = 600
+    j = 1000
+    all_data, classes_count_train, classes_count_test, class_mapping = get_raw_data(filename, resize=True, resize_shape=(i, j, 3))
+    test_data(all_data, resize=True, resize_shape=(i, j, 3))
+    
+#main()
