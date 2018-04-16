@@ -39,7 +39,8 @@ class BatchGenerator():
         for p in list_paths:
             img = cv2.imread(path+p)
             if img is None:
-                print("Error path")
+                
+                print("Error path : , ", path+p)
                 exit()
             l.append(cv2.resize(img, self.resize_shape))
         return np.asarray(l)
