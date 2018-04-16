@@ -6,6 +6,7 @@ Ceci est un script temporaire.
 """
 
 import numpy as np
+import sys
 import pickle
 from model import vgg16, mobilenet_yolo
 from simple_parser import get_raw_data, test_data
@@ -39,9 +40,8 @@ class BatchGenerator():
         for p in list_paths:
             img = cv2.imread(path+p)
             if img is None:
-                
                 print("Error path : , ", path+p)
-                exit()
+                sys.exit()
             l.append(cv2.resize(img, self.resize_shape))
         return np.asarray(l)
     
@@ -63,7 +63,7 @@ class BatchGenerator():
                
                 listofpaths = [self.x[i] for i in idx]
                 
-                yield self.imgs_from_paths(listofpaths), self.y[idx]
+                yield self.imgs_from_paths(listofpaths, path=path), self.y[idx]
                 
         
 class BoundBox:
