@@ -234,7 +234,7 @@ class YOLOv1():
         return np.concatenate((y_bbox.flatten(), y_confidence.flatten(), y_class.flatten()), axis=0)
     
     # training steps
-    def train(self, filename, path=''):
+    def train(self, filename, epoch=50, batch_size=1, path=''):
         X_train, Bboxes_train, X_test, Bboxes_test, classes_count_train, classes_count_test, _ = self.load_data(filename)
         print(len(X_train), Bboxes_train.shape)
         
@@ -243,7 +243,7 @@ class YOLOv1():
             return 0
         
         self.model.compile(optimizer='adam', loss=self.loss_yolo)
-        batch_size=1
+        batch_size=batch_size
         self.save_config()
         batchTrain = BatchGenerator(X_train, Bboxes_train, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=True, path=path)
         batchTest = BatchGenerator(X_test, Bboxes_test, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=False, path=path)
@@ -261,7 +261,7 @@ class YOLOv1():
         #self.print_img(x, y, False)
         step_train = len(X_train)//batch_size
         step_test = len(X_test)//batch_size
-        epochs=50
+        epochs=epoch
         self.model.fit_generator(batchTrain,
           steps_per_epoch=step_train,
           epochs=epochs,
