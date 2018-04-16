@@ -18,6 +18,7 @@ def get_raw_data(input_path, resize=True, resize_shape=(448,448,3)):
 
         for line in f:
             line_split = line.strip().split(',')
+            #print(line_split)
             (filename, width, height, x1, y1, x2, y2, class_name, mode) = line_split # get data files
             width = int(width)
             height = int(height)
@@ -73,8 +74,7 @@ def get_raw_data(input_path, resize=True, resize_shape=(448,448,3)):
                 val_to_switch = class_mapping['bg']
                 class_mapping['bg'] = len(class_mapping) - 1
                 class_mapping[key_to_switch] = val_to_switch
-        #else:
-         #   class_mapping['bg'] = len(class_mapping)
+        
 
         return all_data, classes_count_train, classes_count_test, class_mapping
 

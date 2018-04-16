@@ -34,13 +34,17 @@ class BatchGenerator():
         self.x = X
         self.y = Y
         self.resize_shape = resize
-    def imgs_from_paths(self, list_paths):
+    def imgs_from_paths(self, list_paths, path=''):
         l = []
         for p in list_paths:
-            l.append(cv2.resize(cv2.imread(p), self.resize_shape))
+            img = cv2.imread(path+p)
+            if img == None:
+                print("Error path")
+                exit()
+            l.append(cv2.resize(img, self.resize_shape))
         return np.asarray(l)
     
-    def next_(self, batch_size=1, random=False):
+    def next_(self, batch_size=1, random=False, path=''):
         max_val = len(self.y)
         ite = cycle(list(range(max_val)))
         while True:
@@ -48,7 +52,7 @@ class BatchGenerator():
                 idx = np.random.randint(max_val, size=batch_size)
                 listofpaths = [self.x[i] for i in idx]
                 
-                yield self.imgs_from_paths(listofpaths), self.y[idx]
+                yield self.imgs_from_paths(listofpaths, path=path), self.y[idx]
             else:
                 idx = []
                 for cpt in range(batch_size):
@@ -230,7 +234,7 @@ class YOLOv1():
         return np.concatenate((y_bbox.flatten(), y_confidence.flatten(), y_class.flatten()), axis=0)
     
     # training steps
-    def train(self, filename):
+    def train(self, filename, path=''):
         X_train, Bboxes_train, X_test, Bboxes_test, classes_count_train, classes_count_test, _ = self.load_data(filename)
         print(len(X_train), Bboxes_train.shape)
         
@@ -241,8 +245,8 @@ class YOLOv1():
         self.model.compile(optimizer='adam', loss=self.loss_yolo)
         batch_size=1
         self.save_config()
-        batchTrain = BatchGenerator(X_train, Bboxes_train, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=True)
-        batchTest = BatchGenerator(X_test, Bboxes_test, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=False)
+        batchTrain = BatchGenerator(X_train, Bboxes_train, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=True, path=path)
+        batchTest = BatchGenerator(X_test, Bboxes_test, resize=(self.resize_shape[0],self.resize_shape[1]) ).next_(batch_size=batch_size, random=False, path=path)
         #x, y = next(batchTrain)
         
         # callback
@@ -500,7 +504,8 @@ keras.losses.loss_yolo = YOLOv1().loss_yolo
 filename = 'VOC2007.txt'
 yolo = YOLOv1(input_shape=(448,448,3), model=None, grid_size=(7,7), bounding_boxes=2, number_classes=20)
 yolo.load_network('YOLOv1.hdf5')
-yolo.train(filename)
+yolo.train(filename, path='../../')
+
 #yolo.load_data(filename)
 #yolo.save_config()
 #exit()
