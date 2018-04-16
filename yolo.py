@@ -38,7 +38,7 @@ class BatchGenerator():
     def imgs_from_paths(self, list_paths, path=''):
         l = []
         for p in list_paths:
-            img = cv2.imread(path+p)
+            img = cv2.imread(path+p)/255.0
             if img is None:
                 print("Error path : , ", path+p)
                 sys.exit()
