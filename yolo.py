@@ -334,13 +334,14 @@ class YOLOv1():
         #x, y = next(batchTrain)
         
         # callback
+        lr_decay = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, verbose=1, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0.0) 
         callback_tensorboard = keras.callbacks.TensorBoard(log_dir='./logs', histogram_freq=0, 
                                                            batch_size=32, write_graph=True, write_grads=False, 
                                                            write_images=False, embeddings_freq=0, embeddings_layer_names=None, 
                                                            embeddings_metadata=None)
         output = 'YOLOv1'#-{epoch:02d}
         checkpoints = ModelCheckpoint(output+'.hdf5', verbose=1, save_best_only=True, period=1)
-        callbacks_list = [callback_tensorboard, checkpoints]
+        callbacks_list = [callback_tensorboard, checkpoints, lr_decay]
         #print(x, y)
         #self.print_img(x, y, False)
         step_train = len(X_train)//batch_size
@@ -350,6 +351,7 @@ class YOLOv1():
           steps_per_epoch=step_train,
           epochs=epochs,
           verbose=1,
+          callbacks=callback_list,
           validation_data=batchTest,
           validation_steps=step_test,
           callbacks=callbacks_list)
