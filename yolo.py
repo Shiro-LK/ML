@@ -500,11 +500,11 @@ class YOLOv1():
 
  
          
-keras.losses.loss_yolo = YOLOv1().loss_yolo  
-filename = 'VOC2007.txt'
-yolo = YOLOv1(input_shape=(448,448,3), model=None, grid_size=(7,7), bounding_boxes=2, number_classes=20)
-yolo.load_network('YOLOv1.hdf5')
-yolo.train(filename, path='../../')
+#keras.losses.loss_yolo = YOLOv1().loss_yolo  
+#filename = 'VOC2007.txt'
+#yolo = YOLOv1(input_shape=(448,448,3), model=None, grid_size=(7,7), bounding_boxes=2, number_classes=20)
+#yolo.load_network('YOLOv1.hdf5')
+#yolo.train(filename, path='../../')
 
 #yolo.load_data(filename)
 #yolo.save_config()
