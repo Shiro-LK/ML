@@ -503,15 +503,15 @@ class YOLOv1():
         loss_bbox = K.sum(loss_bbox, axis=1)*self.lambda_coord
         
         # compute loss confidence
-        xmin_true = y_true_bbox[:,:,:,:, 0] - y_true_bbox[:,:,:,:, 2]
-        ymin_true = y_true_bbox[:,:,:,:, 1] - y_true_bbox[:,:,:,:, 3]
-        xmax_true = y_true_bbox[:,:,:,:, 0] + y_true_bbox[:,:,:,:, 2]
-        ymax_true = y_true_bbox[:,:,:,:, 1] + y_true_bbox[:,:,:,:, 3]
+        xmin_true = y_true_bbox[:,:,:,:, 0] - y_true_bbox[:,:,:,:, 2]/2
+        ymin_true = y_true_bbox[:,:,:,:, 1] - y_true_bbox[:,:,:,:, 3]/2
+        xmax_true = y_true_bbox[:,:,:,:, 0] + y_true_bbox[:,:,:,:, 2]/2
+        ymax_true = y_true_bbox[:,:,:,:, 1] + y_true_bbox[:,:,:,:, 3]/2
         
-        xmin_pred = y_pred_bbox[:,:,:,:, 0] - y_pred_bbox[:,:,:,:, 2]
-        ymin_pred = y_pred_bbox[:,:,:,:, 1] - y_pred_bbox[:,:,:,:, 3]
-        xmax_pred = y_pred_bbox[:,:,:,:, 0] + y_pred_bbox[:,:,:,:, 2]
-        ymax_pred = y_pred_bbox[:,:,:,:, 1] + y_pred_bbox[:,:,:,:, 3]
+        xmin_pred = y_pred_bbox[:,:,:,:, 0] - y_pred_bbox[:,:,:,:, 2]/2
+        ymin_pred = y_pred_bbox[:,:,:,:, 1] - y_pred_bbox[:,:,:,:, 3]/2
+        xmax_pred = y_pred_bbox[:,:,:,:, 0] + y_pred_bbox[:,:,:,:, 2]/2
+        ymax_pred = y_pred_bbox[:,:,:,:, 1] + y_pred_bbox[:,:,:,:, 3]/2
         
         #print(' Xmin true : ', K.int_shape(xmin_true))
         
