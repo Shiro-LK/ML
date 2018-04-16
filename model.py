@@ -31,7 +31,7 @@ def relu_clip(max_value=1.):
         return K.relu(x, max_value=K.cast_to_floatx(max_value))
     return relu_custom
 
-def mobilenet_yolo(input_shape, grid_size=7, num_class=20, bounding_boxes=2):
+def mobilenet_yolo(input_shape, grid_size=7, num_class=20, bounding_boxes=2, dropout=0.1):
     #img_input = Input(shape=input_shape)
     
     model = MobileNet(input_shape=input_shape, include_top=False, weights=None, pooling='avg')
@@ -39,11 +39,11 @@ def mobilenet_yolo(input_shape, grid_size=7, num_class=20, bounding_boxes=2):
     
     img_input = model.layers[0].input
     x = model.layers[-1].output
-    model = output_layers(img_input, x, grid_size, num_class, bounding_boxes)
+    model = output_layers(img_input, x, grid_size, num_class, bounding_boxes, dropout=dropout)
     return model
-def vgg16(input_shape, grid_size=7, num_class=20, bounding_boxes=2):
+def vgg16(input_shape, grid_size=7, num_class=20, bounding_boxes=2, dropout=0.1):
     img_input, conv_layers = vgg16_conv(input_shape)
-    model = output_layers(img_input, conv_layers, grid_size, num_class, bounding_boxes)
+    model = output_layers(img_input, conv_layers, grid_size, num_class, bounding_boxes, dropout=dropout)
     return model
 
 def vgg16_conv(input_shape=(448,448,3)):
