@@ -102,7 +102,7 @@ class BoundBox:
 
 class YOLOv1():
     # parameters
-    def __init__(self, input_shape=(448,448,3), model=None, grid_size=(7,7), bounding_boxes=2, number_classes=20):
+    def __init__(self, input_shape=(448,448,3), model=None, grid_size=(7,7), bounding_boxes=2, number_classes=20, dropout=0.1):
         ## array (3, 2) => hauteur 3, largeur 2
         self.Sx = grid_size[1] # separate image in cell (per line/column)
         self.Sy = grid_size[0] # separate image in cell (per line/column)
@@ -116,7 +116,7 @@ class YOLOv1():
             self.model = vgg16(input_shape=input_shape, grid_size=(self.Sy, self.Sx), bounding_boxes=self.B, num_class=self.C)
             self.model.summary()
         if model == 'mobilenet':
-            self.model = mobilenet_yolo(input_shape=input_shape, grid_size=(self.Sy, self.Sx), bounding_boxes=self.B, num_class=self.C)
+            self.model = mobilenet_yolo(input_shape=input_shape, grid_size=(self.Sy, self.Sx), bounding_boxes=self.B, num_class=self.C, dropout=dropout)
             self.model.summary()
         self.class_to_number = None
      
