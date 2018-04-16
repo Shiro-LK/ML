@@ -351,7 +351,6 @@ class YOLOv1():
           steps_per_epoch=step_train,
           epochs=epochs,
           verbose=1,
-          callbacks=callback_list,
           validation_data=batchTest,
           validation_steps=step_test,
           callbacks=callbacks_list)
