@@ -558,7 +558,7 @@ class YOLOv1():
         #print(K.int_shape(loss_bbox))
         #print(K.int_shape(loss_class))
         
-        loss = K.mean(loss_bbox) + K.mean(loss_confidence) + K.mean(loss_class)
+        loss =  K.mean(loss_class) #K.mean(loss_bbox) + K.mean(loss_confidence) +
         #loss = K.mean(loss_confidence) + K.mean(loss_class) #K.mean(loss_bbox) #K.mean(loss_confidence) #K.mean(self.lambda_noobj * loss_confidence)
         return loss
         
